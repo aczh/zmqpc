@@ -1,3 +1,5 @@
+import sys
+import struct
 import socket
 from threading import Thread
 
@@ -25,10 +27,13 @@ class Discoverer:
         try:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         except: pass
-        try:
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, 100)
-            self.join = True
-        except: pass
+
+        if sys.maxsize > 2**32:
+            time = struct.pack(str("ll"), int(0), int(100000))
+        else:
+            time = struct.pack(str("ii"), int(0), int(100000))
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, time)
+
         self.socket.bind(('', self.port))
 
         # optional function that will be called upon new ID discovery.
@@ -70,5 +75,4 @@ class Discoverer:
 
     def close(self):
         self.listening = False
-        if self.join:
-            self.listener.join(1)
+        self.listener.join(1)
