@@ -12,7 +12,13 @@ setup(
         'zmqpc',
     ],
     install_requires=[
-        'pyzmq',
+        'atexit',
         'pyarrow',
+        'pyzmq',
     ],
+    extras_require = {
+        'test': [
+            'pytest',
+        ],
+    },
 )
