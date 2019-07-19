@@ -1,6 +1,6 @@
 import atexit
 import pyarrow
-from pydispatch import dispatcher
+import inspect
 
 from . publisher import Publisher
 from . subscriber import Subscriber
@@ -24,7 +24,22 @@ class Events:
         topic = bytes_to_str(topic)
         if topic in self.topic_to_fn:
             args, kwargs = self.deserialize(payload)
-            self.topic_to_fn[topic](*args, **kwargs)
+
+            to_call = self.topic_to_fn[topic]
+            to_call_spec = inspect.getfullargspec(to_call)
+
+            to_call_kwargs_num = 0 if to_call_spec.defaults is None else len(to_call_spec.defaults)
+            to_call_args_num = len(to_call_spec.args) - to_call_kwargs_num
+
+            # prune out extra args
+            if to_call_spec.varargs == None and len(args) > to_call_args_num:
+                args = args[:to_call_args_num]
+
+            # prune out extra kwargs
+            if to_call_spec.varkw == None and len(kwargs) > to_call_kwargs_num:
+                kwargs = {k:v for k, v in kwargs.items() if k in to_call_spec.args[-to_call_kwargs_num:]}
+
+            to_call(*args, **kwargs)
 
     def connect(self, receiver, topic):
         topic = bytes_to_str(topic)
