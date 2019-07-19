@@ -29,9 +29,9 @@ class Discoverer:
         except: pass
 
         if sys.maxsize > 2**32:
-            time = struct.pack(str("ll"), int(0), int(100000))
+            time = struct.pack(str("ll"), int(1), int(0))
         else:
-            time = struct.pack(str("ii"), int(0), int(100000))
+            time = struct.pack(str("ii"), int(1), int(0))
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, time)
 
         self.socket.bind(('', self.port))
