@@ -13,7 +13,7 @@ class Discoverer:
     Upon startup, a Discoverer announces its ID, then begins listening for other announcements.
     Upon hearing an announcement from an ID it does not recognize, it adds the ID to a set and reannounces its own ID.
     '''
-    def __init__(self, port=50000, id=None, callback=None):
+    def __init__(self, id, port=50000, callback=None):
         self.id = str_to_bytes(id)
         self.port = port
 
