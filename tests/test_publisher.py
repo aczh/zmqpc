@@ -1,11 +1,7 @@
 from zmqpc.publisher import Publisher
 
-def test_initialization_single():
-    p = Publisher()
-    p.close()
-
-def test_initialization_multiple():
-    for i in range(0, 100):
+def test_initialization():
+    for i in range(0, 50):
         p = Publisher()
         p.close()
 
