@@ -27,6 +27,7 @@ def test_subscribe_multiple():
 
     time.sleep(0.1)
 
-    assert fn.calls == len(topics)
+    pub.close()
+    sub.close()
 
-test_subscribe_multiple()
+    assert fn.calls == len(topics)
