@@ -1,7 +1,7 @@
 import colorlog
 import logging.config
 
-LOG_LEVEL = 'DEBUG'
+LOG_LEVEL = 'INFO'
 
 logging.config.dictConfig({
     'version': 1,
