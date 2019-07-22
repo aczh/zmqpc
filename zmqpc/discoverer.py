@@ -84,5 +84,7 @@ class Discoverer:
                         self.announce()
             except: pass
 
+        LOG.debug(f'Discoverer {self.id} closed.')
+
     def close(self):
         self.listening = False
