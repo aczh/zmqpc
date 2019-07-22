@@ -2,9 +2,13 @@ import sys
 import struct
 import socket
 from threading import Thread
+from logging import getLogger
 
 from . constants import MAGIC
 from . utils import str_to_bytes
+
+LOG = getLogger(__name__)
+
 
 class Discoverer:
     '''
@@ -13,6 +17,7 @@ class Discoverer:
     Upon startup, a Discoverer announces its ID, then begins listening for other announcements.
     Upon hearing an announcement from an ID it does not recognize, it adds the ID to a set and reannounces its own ID.
     '''
+
     def __init__(self, id, port=50000, callback=None):
         self.id = str_to_bytes(id)
         self.port = port
@@ -33,6 +38,7 @@ class Discoverer:
     def announce(self):
         '''Broadcasts our ID.'''
         self.socket.sendto(MAGIC + self.id, ('<broadcast>', self.port))
+        LOG.debug(f'Discoverer {self.id} announcing.')
 
     def initialize_socket(self):
         # build a UDP broadcast socket that multiple clients can bind to
@@ -71,12 +77,12 @@ class Discoverer:
                     recv_id = data[len(MAGIC):]
                     if recv_id not in self.friends:
                         self.friends.add(recv_id)
+                        LOG.debug(f'Discoverer {self.id} found {recv_id}.')
+
                         if self.callback:
                             self.callback(int(recv_id))
                         self.announce()
             except: pass
-        # self.socket.shutdown(socket.SHUT_RDWR)
-        # self.socket.close()
 
     def close(self):
         self.listening = False

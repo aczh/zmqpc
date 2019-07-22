@@ -51,15 +51,19 @@ class Subscriber:
     ########################################
     def subscribe(self, topic=''):
         self.req_socket.publish(self.req_topic, SubscriberRequests.SUB_ADD + str_to_bytes(topic))
+        LOG.debug(f'Subscriber {self.req_socket.port} requesting subscription to topic: {topic}')
 
     def unsubscribe(self, topic=''):
         self.req_socket.publish(self.req_topic, SubscriberRequests.SUB_REMOVE + str_to_bytes(topic))
+        LOG.debug(f'Subscriber {self.req_socket.port} requesting unsubscription from topic: {topic}')
 
     def connect(self, port):
         self.req_socket.publish(self.req_topic, SubscriberRequests.CONN_ADD + str_to_bytes(f'tcp://{self.address}:{port}'))
+        LOG.debug(f'Subscriber {self.req_socket.port} requesting connection to topic: {port}')
 
     def disconnect(self, port):
         self.req_socket.publish(self.req_topic, SubscriberRequests.CONN_REMOVE + str_to_bytes(f'tcp://{self.address}:{port}'))
+        LOG.debug(f'Subscriber {self.req_socket.port} requesting disconnection from topic: {port}')
 
     ########################################
     # socket polling
@@ -94,12 +98,16 @@ class Subscriber:
                     req_data = bytes_to_str(payload[1:])
                     if req == SubscriberRequests.SUB_ADD:
                         socket.setsockopt_string(zmq.SUBSCRIBE, req_data)
+                        LOG.debug(f'Subscriber {self.req_socket.port} subscribed to topic: {req_data}')
                     elif req == SubscriberRequests.SUB_REMOVE:
                         socket.setsockopt_string(zmq.UNSUBSCRIBE, req_data)
+                        LOG.debug(f'Subscriber {self.req_socket.port} unsubscribed from topic: {req_data}')
                     elif req == SubscriberRequests.CONN_ADD:
                         socket.connect(req_data)
+                        LOG.debug(f'Subscriber {self.req_socket.port} connected to port: {req_data}')
                     elif req == SubscriberRequests.CONN_REMOVE:
                         socket.disconnect(req_data)
+                        LOG.debug(f'Subscriber {self.req_socket.port} disconnected from port: {req_data}')
                 elif self.callback:
                     self.callback(topic, payload)
             except zmq.error.Again:

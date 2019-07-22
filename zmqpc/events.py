@@ -1,11 +1,15 @@
 import atexit
 import pyarrow
 import inspect
+from logging import getLogger
 
 from . publisher import Publisher
 from . subscriber import Subscriber
 from . discoverer import Discoverer
 from . utils import bytes_to_str
+
+LOG = getLogger(__name__)
+
 
 class Events:
     def __init__(self):
