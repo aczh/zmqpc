@@ -12,6 +12,7 @@ setup(
         'zmqpc',
     ],
     install_requires=[
+        'colorlog',
         'pyarrow',
         'pyzmq',
     ],

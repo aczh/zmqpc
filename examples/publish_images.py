@@ -5,6 +5,7 @@ Displays the last image.
 '''
 import os
 import cv2
+import time
 from pathlib import Path
 from zmqpc import Events
 
@@ -21,7 +22,11 @@ def save_img(img):
     print(f'recv img {RECV_IMG_NUM}/{IMGS_TO_PUBLISH}')
     RECV_IMG = img
 
+time.sleep(0.1)
+
 sub.connect(save_img, 'apple')
+
+time.sleep(0.1)
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 img_path = str(Path(cur_dir, 'resources/img.jpg').absolute())
