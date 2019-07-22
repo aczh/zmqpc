@@ -17,6 +17,24 @@ class Discoverer:
         self.id = str_to_bytes(id)
         self.port = port
 
+        # optional function that will be called upon new ID discovery.
+        self.callback = callback
+
+        # set that holds previously seen IDs
+        self.friends = set()
+        self.friends.add(self.id)
+
+        # listener thread
+        self.listening = True
+        self.listener = Thread(target=self.listen)
+        self.listener.daemon = True
+        self.listener.start()
+
+    def announce(self):
+        '''Broadcasts our ID.'''
+        self.socket.sendto(MAGIC + self.id, ('<broadcast>', self.port))
+
+    def initialize_socket(self):
         # build a UDP broadcast socket that multiple clients can bind to
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -36,31 +54,16 @@ class Discoverer:
 
         self.socket.bind(('', self.port))
 
-        # optional function that will be called upon new ID discovery.
-        self.callback = callback
-
-        # set that holds previously seen IDs
-        self.friends = set()
-        self.friends.add(self.id)
-
-        self.announce()
-
-        # listener thread
-        self.listening = True
-        self.listener = Thread(target=self.listen)
-        self.listener.daemon = True
-        self.listener.start()
-
-    def announce(self):
-        '''Broadcasts our ID.'''
-        self.socket.sendto(MAGIC + self.id, ('<broadcast>', self.port))
-
     def listen(self):
         '''
         Listens for broadcasts on a loop.
         Upon hearing a broadcast, check to see if the ID isn't recognized.
         If it isn't, add it to our list of heard IDs, announce ourselves, and call our callback.
         '''
+        self.initialize_socket()
+
+        self.announce()
+
         while self.listening:
             try:
                 data, addr = self.socket.recvfrom(1024)
@@ -72,7 +75,8 @@ class Discoverer:
                             self.callback(int(recv_id))
                         self.announce()
             except: pass
+        # self.socket.shutdown(socket.SHUT_RDWR)
+        # self.socket.close()
 
     def close(self):
         self.listening = False
-        self.listener.join(1)

@@ -12,8 +12,8 @@ def simple_recv(topic='test_topic', data=None):
     fn.data = None
     sub.connect(fn, topic)
 
-    time.sleep(0.1)
+    time.sleep(0.3)
     pub.publish(topic, data)
 
-    time.sleep(0.1)
+    time.sleep(0.3)
     return fn.data
