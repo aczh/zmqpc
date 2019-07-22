@@ -1,19 +1,27 @@
 import atexit
 import pyarrow
 import inspect
+from logging import getLogger
 
 from . publisher import Publisher
 from . subscriber import Subscriber
 from . discoverer import Discoverer
 from . utils import bytes_to_str
 
+LOG = getLogger(__name__)
+
+
 class Events:
-    def __init__(self):
+    def __init__(self, name=None):
         self.p = Publisher()
         self.s = Subscriber(callback=self.on_message)
         self.d = Discoverer(id=self.p.port, callback=self.on_port_discovery)
 
+        self.name = name if name is not None else str(self.p.port)
+
         self.topic_to_fn = {}
+
+        LOG.info(f'Events: {self.name} starting.')
 
         atexit.register(self.close)
 
