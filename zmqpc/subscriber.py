@@ -1,21 +1,36 @@
 import zmq
+import uuid
 from threading import Thread
 
 from . constants import DELIMETER
+from . publisher import Publisher
+from . utils import str_to_bytes, bytes_to_str
 
 from logging import getLogger
 LOG = getLogger(__name__)
 
 
+class SubscriberRequests:
+    SUB_ADD = b'1'
+    SUB_REMOVE = b'2'
+    CONN_ADD = b'3'
+    CONN_REMOVE = b'4'
+
 class Subscriber:
-    '''Simple ZMQ subscriber.'''
+    '''
+    ZMQ Subscriber.
+    Can subscribe/unsubscribe from topics.
+    Can connect/disconnect from IPs.
+
+    ZMQ is not thread-safe.
+    To get around this, we use a publisher req_socket to publish events to the main subscriber socket.
+    The subscriber socket is created in a seperate thread.
+    It connects/subscribes to the req_socket's port and special subscription topic.
+    It connects/disconnects and subscribes/unsubscribes baseed on events from the req_socket.
+    '''
     def __init__(self, address='127.0.0.1', timeout=100, callback=None):
         self.address = address
-        self.socket = zmq.Context().socket(zmq.SUB)
-        self.socket.setsockopt(zmq.RCVTIMEO, timeout)
-
-        self.subscriptions = set()
-        self.connections = set()
+        self.timeout = timeout
 
         # function to be called upon receiving a message
         self.callback = callback
@@ -23,34 +38,28 @@ class Subscriber:
         # listener thread
         self.listening = True
         self.listener = None
+
+        # socket that sends subscribe/unsubscribe and connect/disconnet messages to listener socket.
+        self.req_socket = Publisher()
+        self.req_topic = str(uuid.uuid4())
+        self.req_topic_bytes = str_to_bytes(self.req_topic)
+
         self.start_listening()
 
     ########################################
     # subscription/connection methods
     ########################################
     def subscribe(self, topic=''):
-        if topic not in self.subscriptions:
-            self.subscriptions.add(topic)
-            self.socket.setsockopt_string(zmq.SUBSCRIBE, topic)
-            LOG.debug(f"Socket subscribing to '{topic}'")
+        self.req_socket.publish(self.req_topic, SubscriberRequests.SUB_ADD + str_to_bytes(topic))
 
     def unsubscribe(self, topic=''):
-        if topic in self.subscriptions:
-            self.subscriptions.remove(topic)
-            self.socket.setsockopt_string(zmq.UNSUBSCRIBE, topic)
-            LOG.debug(f"Socket unsubscribing to '{topic}'")
+        self.req_socket.publish(self.req_topic, SubscriberRequests.SUB_REMOVE + str_to_bytes(topic))
 
     def connect(self, port):
-        if port not in self.connections:
-            self.socket.connect(f'tcp://{self.address}:{port}')
-            self.connections.add(port)
-            LOG.debug(f"Subscriber connecting at {port}")
+        self.req_socket.publish(self.req_topic, SubscriberRequests.CONN_ADD + str_to_bytes(f'tcp://{self.address}:{port}'))
 
     def disconnect(self, port):
-        if port in self.connections:
-            self.socket.disconnect(f'tcp://{self.address}:{port}')
-            self.connections.remove(port)
-            LOG.debug(f"Subscriber disconnecting at {port}")
+        self.req_socket.publish(self.req_topic, SubscriberRequests.CONN_REMOVE + str_to_bytes(f'tcp://{self.address}:{port}'))
 
     ########################################
     # socket polling
@@ -62,21 +71,44 @@ class Subscriber:
         self.listener.start()
 
     def listen(self):
+        '''
+        Function that creates a socket that listens on loop.
+        Designed to be run on a seperate thread.
+        The socket created in this thread should NOT be used outside of this thread.
+        '''
+        # initialize the socket
+        socket = zmq.Context().socket(zmq.SUB)
+        socket.setsockopt(zmq.RCVTIMEO, self.timeout)
+
+        # connect the socket to our requester socket
+        socket.connect(f'tcp://{self.address}:{self.req_socket.port}')
+        socket.setsockopt_string(zmq.SUBSCRIBE, self.req_topic)
+
         while self.listening:
             try:
-                msg = self.socket.recv()
+                msg = socket.recv()
                 topic, payload = msg.split(DELIMETER, 1)
-                if self.callback:
+                if topic == self.req_topic_bytes:
+                    # this message came from our requester socket.
+                    req = payload[0:1]
+                    req_data = bytes_to_str(payload[1:])
+                    if req == SubscriberRequests.SUB_ADD:
+                        socket.setsockopt_string(zmq.SUBSCRIBE, req_data)
+                    elif req == SubscriberRequests.SUB_REMOVE:
+                        socket.setsockopt_string(zmq.UNSUBSCRIBE, req_data)
+                    elif req == SubscriberRequests.CONN_ADD:
+                        socket.connect(req_data)
+                    elif req == SubscriberRequests.CONN_REMOVE:
+                        socket.disconnect(req_data)
+                elif self.callback:
                     self.callback(topic, payload)
             except zmq.error.Again:
                 pass
+
+        socket.close()
 
     ########################################
     # cleanup
     ########################################
     def close(self):
         self.listening = False
-        self.listener.join(1)
-        if self.socket:
-            self.socket.close()
-            self.socket = None
