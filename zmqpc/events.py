@@ -1,11 +1,15 @@
 import atexit
 import pyarrow
 import inspect
+from logging import getLogger
 
 from . publisher import Publisher
 from . subscriber import Subscriber
 from . discoverer import Discoverer
 from . utils import bytes_to_str
+
+LOG = getLogger(__name__)
+
 
 class Events:
     def __init__(self, name=None):
@@ -17,7 +21,7 @@ class Events:
 
         self.topic_to_fn = {}
 
-        log.info(f'Events: {self.name} starting.')
+        LOG.info(f'Events: {self.name} starting.')
 
         atexit.register(self.close)
 
