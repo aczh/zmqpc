@@ -44,25 +44,51 @@ class Subscriber:
         self.req_topic = str(uuid.uuid4())
         self.req_topic_bytes = str_to_bytes(self.req_topic)
 
+        self.listener_ready = False
+        self.queued_listener_funcs = []
+
         self.start_listening()
 
     ########################################
     # subscription/connection methods
     ########################################
+    def listener_is_ready(self):
+        self.listener_ready = True
+        for publish_data in self.queued_listener_funcs:
+            self.req_socket.publish(self.req_topic, publish_data)
+        print("LISTENER IS READY")
+
     def subscribe(self, topic=''):
-        self.req_socket.publish(self.req_topic, SubscriberRequests.SUB_ADD + str_to_bytes(topic))
+        publish_data = SubscriberRequests.SUB_ADD + str_to_bytes(topic)
+        if not self.listener_ready:
+            self.queued_listener_funcs.append(publish_data)
+        else:
+            self.req_socket.publish(self.req_topic, publish_data)
         LOG.debug(f'Subscriber {self.req_socket.port} requesting subscription to topic: {topic}')
 
     def unsubscribe(self, topic=''):
-        self.req_socket.publish(self.req_topic, SubscriberRequests.SUB_REMOVE + str_to_bytes(topic))
+        publish_data = SubscriberRequests.SUB_REMOVE + str_to_bytes(topic)
+        if not self.listener_ready:
+            self.queued_listener_funcs.append(publish_data)
+        else:
+            self.req_socket.publish(self.req_topic, publish_data)
+
         LOG.debug(f'Subscriber {self.req_socket.port} requesting unsubscription from topic: {topic}')
 
     def connect(self, port):
-        self.req_socket.publish(self.req_topic, SubscriberRequests.CONN_ADD + str_to_bytes(f'tcp://{self.address}:{port}'))
+        publish_data = SubscriberRequests.CONN_ADD + str_to_bytes(f'tcp://{self.address}:{port}')
+        if not self.listener_ready:
+            self.queued_listener_funcs.append(publish_data)
+        else:
+            self.req_socket.publish(self.req_topic, publish_data)
         LOG.debug(f'Subscriber {self.req_socket.port} requesting connection to topic: {port}')
 
     def disconnect(self, port):
-        self.req_socket.publish(self.req_topic, SubscriberRequests.CONN_REMOVE + str_to_bytes(f'tcp://{self.address}:{port}'))
+        publish_data = SubscriberRequests.CONN_REMOVE + str_to_bytes(f'tcp://{self.address}:{port}')
+        if not self.listener_ready:
+            self.queued_listener_funcs.append(publish_data)
+        else:
+            self.req_socket.publish(self.req_topic, publish_data)
         LOG.debug(f'Subscriber {self.req_socket.port} requesting disconnection from topic: {port}')
 
     ########################################
@@ -87,6 +113,8 @@ class Subscriber:
         # connect the socket to our requester socket
         socket.connect(f'tcp://{self.address}:{self.req_socket.port}')
         socket.setsockopt_string(zmq.SUBSCRIBE, self.req_topic)
+
+        self.listener_is_ready()
 
         while self.listening:
             try:

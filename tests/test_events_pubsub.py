@@ -11,7 +11,6 @@ def simple_recv(topic='test_topic', data=None):
         fn.data = data
     fn.data = None
 
-    time.sleep(0.1)
     sub.connect(fn, topic)
 
     time.sleep(0.1)
