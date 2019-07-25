@@ -56,7 +56,6 @@ class Subscriber:
         self.listener_ready = True
         for publish_data in self.queued_listener_funcs:
             self.req_socket.publish(self.req_topic, publish_data)
-        print("LISTENER IS READY")
 
     def subscribe(self, topic=''):
         publish_data = SubscriberRequests.SUB_ADD + str_to_bytes(topic)

@@ -73,12 +73,13 @@ class Discoverer:
         while self.listening:
             try:
                 data, addr = self.socket.recvfrom(1024)
+                if not self.listening:
+                    break
                 if data.startswith(MAGIC):
                     recv_id = data[len(MAGIC):]
                     if recv_id not in self.friends:
                         self.friends.add(recv_id)
                         LOG.debug(f'Discoverer {self.id} found {recv_id}.')
-
                         if self.callback:
                             self.callback(int(recv_id))
                         self.announce()

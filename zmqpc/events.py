@@ -1,4 +1,5 @@
 import atexit
+import pickle
 import pyarrow
 import inspect
 from logging import getLogger
@@ -59,10 +60,12 @@ class Events:
         self.p.publish(topic, serialized)
 
     def serialize(self, obj):
-        return pyarrow.serialize(obj).to_buffer().to_pybytes()
+        return pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+        # return pyarrow.serialize(obj).to_buffer().to_pybytes()
 
     def deserialize(self, obj):
-        return pyarrow.deserialize(obj)
+        return pickle.loads(obj)
+        # return pyarrow.deserialize(obj)
 
     def close(self):
         self.p.close()
