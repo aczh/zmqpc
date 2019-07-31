@@ -3,6 +3,7 @@ Example of publishing more args than callback receives.
 '''
 import time
 from zmqpc import Events
+from resources import logging_config
 
 pub = Events()
 sub = Events()

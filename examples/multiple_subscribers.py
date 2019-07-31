@@ -3,6 +3,7 @@ Example of sending simple strings using args and kwargs.
 '''
 import time
 from zmqpc import Events
+from resources import logging_config
 
 pub = Events()
 sub1 = Events()

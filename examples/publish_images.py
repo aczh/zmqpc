@@ -8,6 +8,7 @@ import cv2
 import time
 from pathlib import Path
 from zmqpc import Events
+from resources import logging_config
 
 IMGS_TO_PUBLISH = 100
 RECV_IMG_NUM = 0
