@@ -1,12 +1,11 @@
 import atexit
-import pyarrow
 import inspect
 from logging import getLogger
 
 from . publisher import Publisher
 from . subscriber import Subscriber
 from . discoverer import Discoverer
-from . utils import bytes_to_str
+from . utils import bytes_to_str, serialize, deserialize
 
 LOG = getLogger(__name__)
 
@@ -57,12 +56,6 @@ class Events:
     def publish(self, topic, *args, **kwargs):
         serialized = self.serialize((args, kwargs))
         self.p.publish(topic, serialized)
-
-    def serialize(self, obj):
-        return pyarrow.serialize(obj).to_buffer().to_pybytes()
-
-    def deserialize(self, obj):
-        return pyarrow.deserialize(obj)
 
     def close(self):
         self.p.close()
